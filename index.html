@@ -190,19 +190,30 @@
     const SANS = "'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif";
 
     function TemplateDisplay({ template, cfg }) {
+      const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+      useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener("resize", handler);
+        return () => window.removeEventListener("resize", handler);
+      }, []);
       const parts = template.split(/(\{[A-C]\})/);
       return (
-        <p style={{margin:0,fontSize:13,fontFamily:MONO,lineHeight:2.1,wordBreak:"break-all"}}>
-          {parts.map((part, i) => {
-            const m = part.match(/\{([A-C])\}/);
-            if (m) return (
-              <span key={i} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:cfg.light,color:cfg.dark,borderRadius:5,padding:"1px 8px",margin:"0 2px",fontSize:12,fontWeight:700,fontFamily:SANS,border:`1.5px solid ${cfg.color}`,verticalAlign:"middle"}}>
-                {m[1]}
-              </span>
-            );
-            return <span key={i}>{part}</span>;
-          })}
-        </p>
+        <div style={{position:"relative"}}>
+          <p style={{margin:0,fontSize:13,fontFamily:MONO,lineHeight:2.1,whiteSpace:isMobile?"normal":"nowrap",overflowX:isMobile?"visible":"auto",wordBreak:isMobile?"break-word":"normal",paddingRight:isMobile?0:48}}>
+            {parts.map((part, i) => {
+              const m = part.match(/\{([A-C])\}/);
+              if (m) return (
+                <span key={i} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:cfg.light,color:cfg.dark,borderRadius:5,padding:"1px 8px",margin:"0 2px",fontSize:12,fontWeight:700,fontFamily:SANS,border:`1.5px solid ${cfg.color}`,verticalAlign:"middle"}}>
+                  {m[1]}
+                </span>
+              );
+              return <span key={i}>{part}</span>;
+            })}
+          </p>
+          {!isMobile&&(
+            <div style={{position:"absolute",right:0,top:0,bottom:0,width:48,background:"linear-gradient(to right, transparent, #ffffff)",pointerEvents:"none"}}/>
+          )}
+        </div>
       );
     }
 
@@ -318,7 +329,7 @@
               </button>
             ))}
           </div>
-          <div style={{maxWidth:640,margin:"0 auto",padding:16}}>
+          <div style={{maxWidth:900,margin:"0 auto",padding:16}}>
             {done ? (
               <div style={{textAlign:"center",padding:"48px 20px"}}>
                 <div style={{fontSize:52,marginBottom:16}}>🎊</div>
