@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>参考文献 書き方練習</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #F5F3EE; }
+    textarea, input, button, pre { font-family: inherit; }
+    textarea:focus, input:focus { box-shadow: 0 0 0 2px #2D6A4F44; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    const normalize = (arr) => arr.join(" ").replace(/\s+/g, " ").trim();
+
+    const FORMAT_DOC =
+`【参考文献の書き方（投稿要領）】
+
+■ 学術雑誌（論文）
+（必須項目）著者名, "標題," 雑誌名, 巻, 号, pp.始め-終り, 発行年.
+例）[1] 山上一郎, 山下二郎, "パラメトリック増幅器," 信学論(B),
+    vol.J62-B, no.1, pp.20-27, Jan. 1979.
+
+■ 著書・編書
+（必須項目）著者名, 書名, 編者名, 発行所, 発行都市名, 発行年.
+例）[2] 山田太郎, 移動通信, 木村次郎（編）,
+    （社）電子情報通信学会, 東京, 1989.
+
+■ 著書の一部を引用する場合
+（必須項目）著者名, "標題," 書名, 編者名, pp.始め-終り,
+    発行所, 発行都市名, 発行年.
+例）[3] 山田太郎, "周波数の有効利用," 移動通信,
+    木村次郎（編）, pp.21-41, （社）電子情報通信学会, 東京, 1989.
+
+■ Webページ
+（必須項目）著者名, "Webページタイトル," サイト管理者名等,
+    URL, 文書年月日または参照年月日.
+例）[4] 著作権管理委員会, "本会出版物の著作権基準,"
+    電子情報通信学会, http://www.ieice.org/kitei.pdf, 参照 Aug. 3, 2009.
+
+■ 注意事項
+・各文献に番号をつける：[1], [2], [3]...
+・区切りはカンマ（,）を使う
+・論文・Web・引用章のタイトルは " " で囲む（書名は引用符なし）
+・最後は .（ピリオド）で終える`;
+
+    const BEGINNER_PROBLEMS = [
+      { type:"position", id:"b1", subtitle:"学術論文",
+        question:'文献番号「[1]」はどこに入る？',
+        template:'{A}鈴木花子, "SNSと情報リテラシー," 教育情報研究, vol.8, no.3, pp.45-62, 2022.',
+        element:"[1]", answer:"A",
+        answerText:'[1] 鈴木花子, "SNSと情報リテラシー," 教育情報研究, vol.8, no.3, pp.45-62, 2022.',
+        hint:"文献番号 [番号] は出典の先頭に書きます。" },
+      { type:"position", id:"b2", subtitle:"学術論文",
+        question:'論文タイトルはどこに入る？（" " で囲んで）',
+        template:'[1] 鈴木花子, {A}教育情報研究, {B}vol.8, no.3, pp.45-62, 2022.{C}',
+        element:'"SNSと情報リテラシー,"', answer:"A",
+        answerText:'[1] 鈴木花子, "SNSと情報リテラシー," 教育情報研究, vol.8, no.3, pp.45-62, 2022.',
+        hint:'論文タイトルは著者名のすぐ後に " " で囲んで書きます。最後にカンマ。' },
+      { type:"position", id:"b3", subtitle:"学術論文",
+        question:"発行年はどこに入る？",
+        template:'[1] 鈴木花子, "SNSと情報リテラシー," 教育情報研究, {A}vol.8, {B}no.3, pp.45-62,{C}',
+        element:"2022.", answer:"C",
+        answerText:'[1] 鈴木花子, "SNSと情報リテラシー," 教育情報研究, vol.8, no.3, pp.45-62, 2022.',
+        hint:"発行年は出典の一番最後（ピリオドで終える）に書きます。" },
+      { type:"position", id:"b4", subtitle:"著書",
+        question:"発行都市名「東京」はどこに入る？",
+        template:"[2] 山田太郎, データ分析入門, 田中次郎（編）, {A}情報出版, {B}2021.{C}",
+        element:"東京,", answer:"B",
+        answerText:"[2] 山田太郎, データ分析入門, 田中次郎（編）, 情報出版, 東京, 2021.",
+        hint:"発行都市名は発行所の後、発行年の前に書きます。" },
+      { type:"position", id:"b5", subtitle:"Webページ",
+        question:'Webタイトルはどこに入る？（" " で囲んで）',
+        template:"[4] 総務省, {A}総務省, {B}https://soumu.go.jp/r05.html, 参照 Mar. 1, 2024.{C}",
+        element:'"令和5年版情報通信白書,"', answer:"A",
+        answerText:'[4] 総務省, "令和5年版情報通信白書," 総務省, https://soumu.go.jp/r05.html, 参照 Mar. 1, 2024.',
+        hint:'Webタイトルも著者名の後に " " で囲んで書きます。' },
+      { type:"tap-order", id:"b6", subtitle:"学術論文",
+        question:"学術論文の出典を正しい順に並べよう",
+        tiles:["[1]","高橋美咲,",'"生成AIと学習効果,"',"高等教育研究,","vol.20, no.1,","pp.78-95,","2024."],
+        answer:["[1]","高橋美咲,",'"生成AIと学習効果,"',"高等教育研究,","vol.20, no.1,","pp.78-95,","2024."],
+        hint:'[番号] 著者名, "タイトル," 雑誌名, 巻, 号, pp.ページ, 発行年. の順です。' },
+      { type:"tap-order", id:"b7", subtitle:"著書",
+        question:"著書の出典を正しい順に並べよう",
+        tiles:["[2]","山田太郎,","移動通信,","木村次郎（編）,","（社）電子情報通信学会,","東京,","1989."],
+        answer:["[2]","山田太郎,","移動通信,","木村次郎（編）,","（社）電子情報通信学会,","東京,","1989."],
+        hint:"[番号] 著者名, 書名, 編者名, 発行所, 発行都市名, 発行年. の順です。" },
+      { type:"tap-order", id:"b8", subtitle:"著書の一部を引用",
+        question:"著書の一部（引用）の出典を正しい順に並べよう",
+        tiles:["[3]","山田太郎,",'"周波数の有効利用,"',"移動通信,","木村次郎（編）,","pp.21-41,","（社）電子情報通信学会,","東京,","1989."],
+        answer:["[3]","山田太郎,",'"周波数の有効利用,"',"移動通信,","木村次郎（編）,","pp.21-41,","（社）電子情報通信学会,","東京,","1989."],
+        hint:'[番号] 著者名, "章タイトル," 書名, 編者名, pp.ページ, 発行所, 都市, 年. の順です。' },
+      { type:"tap-order", id:"b9", subtitle:"Webページ",
+        question:"Webページの出典を正しい順に並べよう",
+        tiles:["[4]","著作権管理委員会,",'"本会出版物の著作権基準,"',"電子情報通信学会,","http://www.ieice.org/kitei.pdf,","参照 Aug. 3, 2009."],
+        answer:["[4]","著作権管理委員会,",'"本会出版物の著作権基準,"',"電子情報通信学会,","http://www.ieice.org/kitei.pdf,","参照 Aug. 3, 2009."],
+        hint:'[番号] 著者名, "タイトル," 管理者名, URL, 参照 年月日. の順です。' },
+      { type:"tap-order", id:"b10", subtitle:"学術論文（複数著者）",
+        question:"学術論文（著者2名）の出典を正しい順に並べよう",
+        tiles:["[1]","山上一郎, 山下二郎,",'"パラメトリック増幅器,"',"信学論(B),","vol.J62-B, no.1,","pp.20-27,","Jan. 1979."],
+        answer:["[1]","山上一郎, 山下二郎,",'"パラメトリック増幅器,"',"信学論(B),","vol.J62-B, no.1,","pp.20-27,","Jan. 1979."],
+        hint:"複数著者はカンマで区切ります。発行年は月 年の形式（Jan. 1979.）。" },
+    ];
+
+    const INTERMEDIATE_PROBLEMS = [
+      { id:"m1", instruction:"例と参考文献カードをもとに、出典を書いてください",
+        example:'[1] 山上一郎, 山下二郎, "パラメトリック増幅器," 信学論(B), vol.J62-B, no.1, pp.20-27, Jan. 1979.',
+        reference:{ type:"学術論文", items:[
+          {label:"文献番号",value:"[1]"},{label:"著者",value:"鈴木花子"},
+          {label:"論文タイトル",value:"SNSと大学生の情報リテラシー"},{label:"雑誌名",value:"メディア情報研究"},
+          {label:"巻",value:"vol.8"},{label:"号",value:"no.3"},{label:"ページ",value:"pp.45-62"},{label:"発行年",value:"2022"},
+        ]},
+        answer:'[1] 鈴木花子, "SNSと大学生の情報リテラシー," メディア情報研究, vol.8, no.3, pp.45-62, 2022.',
+        hint:'論文タイトルは " " で囲みます。巻は vol.、号は no. の形式。区切りはカンマです。' },
+      { id:"m2", instruction:"例と参考文献カードをもとに、出典を書いてください",
+        example:"[2] 山田太郎, 移動通信, 木村次郎（編）, （社）電子情報通信学会, 東京, 1989.",
+        reference:{ type:"著書", items:[
+          {label:"文献番号",value:"[2]"},{label:"著者",value:"中村健一"},
+          {label:"書名",value:"データサイエンス入門"},{label:"編者",value:"佐藤次郎（編）"},
+          {label:"発行所",value:"学術出版社"},{label:"発行都市名",value:"東京"},{label:"発行年",value:"2021"},
+        ]},
+        answer:"[2] 中村健一, データサイエンス入門, 佐藤次郎（編）, 学術出版社, 東京, 2021.",
+        hint:"書名はカギカッコ・引用符なし。発行所→発行都市名→発行年の順に注意。" },
+      { id:"m3", instruction:"例と参考文献カードをもとに、出典を書いてください",
+        example:'[4] 著作権管理委員会, "本会出版物の著作権基準," 電子情報通信学会, http://www.ieice.org/kitei.pdf, 参照 Aug. 3, 2009.',
+        reference:{ type:"Webページ", items:[
+          {label:"文献番号",value:"[3]"},{label:"著者",value:"文部科学省"},
+          {label:"タイトル",value:"大学設置基準の改正について"},{label:"サイト管理者",value:"文部科学省"},
+          {label:"URL",value:"https://www.mext.go.jp/b_menu/shingi/daigaku/r05.html"},{label:"参照日",value:"Oct. 15, 2023"},
+        ]},
+        answer:'[3] 文部科学省, "大学設置基準の改正について," 文部科学省, https://www.mext.go.jp/b_menu/shingi/daigaku/r05.html, 参照 Oct. 15, 2023.',
+        hint:'Webタイトルも " " で囲みます。最後は「参照 月 日, 年.」の形式。' },
+    ];
+
+    const ADVANCED_PROBLEMS = [
+      { id:"a1", instruction:"投稿要領を読んで、出典を書いてください",
+        reference:{ type:"著書の一部を引用", items:[
+          {label:"文献番号",value:"[3]"},{label:"著者",value:"山田太郎"},
+          {label:"章タイトル",value:"周波数の有効利用"},{label:"書名",value:"移動通信"},
+          {label:"編者",value:"木村次郎（編）"},{label:"ページ",value:"pp.21-41"},
+          {label:"発行所",value:"（社）電子情報通信学会"},{label:"発行都市名",value:"東京"},{label:"発行年",value:"1989"},
+        ]},
+        answer:'[3] 山田太郎, "周波数の有効利用," 移動通信, 木村次郎（編）, pp.21-41, （社）電子情報通信学会, 東京, 1989.',
+        hint:'著書の一部引用では章タイトルを " " で囲み、書名の前に置きます。投稿要領[3]の例を確認しましょう。' },
+      { id:"a2", instruction:"投稿要領を読んで、出典を書いてください",
+        reference:{ type:"学術論文（複数著者）", items:[
+          {label:"文献番号",value:"[1]"},{label:"著者",value:"山上一郎, 山下二郎"},
+          {label:"論文タイトル",value:"パラメトリック増幅器"},{label:"雑誌名",value:"信学論(B)"},
+          {label:"巻",value:"vol.J62-B"},{label:"号",value:"no.1"},{label:"ページ",value:"pp.20-27"},{label:"発行年",value:"Jan. 1979"},
+        ]},
+        answer:'[1] 山上一郎, 山下二郎, "パラメトリック増幅器," 信学論(B), vol.J62-B, no.1, pp.20-27, Jan. 1979.',
+        hint:"複数著者はカンマで区切ります。発行年は月 年の形式（Jan. 1979.）。" },
+      { id:"a3", instruction:"投稿要領を読んで、出典を書いてください",
+        reference:{ type:"Webページ", items:[
+          {label:"文献番号",value:"[4]"},{label:"著者",value:"著作権管理委員会"},
+          {label:"タイトル",value:"本会出版物（技術研究報告以外）に掲載された論文等の著作権の利用申請基準"},
+          {label:"サイト管理者",value:"電子情報通信学会"},
+          {label:"URL",value:"http://www.ieice.org/jpn/about/kitei/files/chosaku_hyou3.pdf"},
+          {label:"参照日",value:"Aug. 3, 2009"},
+        ]},
+        answer:'[4] 著作権管理委員会, "本会出版物（技術研究報告以外）に掲載された論文等の著作権の利用申請基準," 電子情報通信学会, http://www.ieice.org/jpn/about/kitei/files/chosaku_hyou3.pdf, 参照 Aug. 3, 2009.',
+        hint:'投稿要領[4]の形式をよく確認しましょう。タイトルが長くても " " で囲みます。' },
+    ];
+
+    const PROBLEMS = { beginner:BEGINNER_PROBLEMS, intermediate:INTERMEDIATE_PROBLEMS, advanced:ADVANCED_PROBLEMS };
+    const LEVEL_CONFIG = {
+      beginner:     {label:"初級", color:"#2D6A4F", light:"#D8F3DC", dark:"#1B4332"},
+      intermediate: {label:"中級", color:"#9B6A1A", light:"#FFF3CD", dark:"#5C3D0A"},
+      advanced:     {label:"上級", color:"#842029", light:"#F8D7DA", dark:"#58151C"},
+    };
+    const MONO = "'Courier New', Courier, monospace";
+    const SANS = "'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif";
+
+    function TemplateDisplay({ template, cfg }) {
+      const parts = template.split(/(\{[A-C]\})/);
+      return (
+        <p style={{margin:0,fontSize:13,fontFamily:MONO,lineHeight:2.1,wordBreak:"break-all"}}>
+          {parts.map((part, i) => {
+            const m = part.match(/\{([A-C])\}/);
+            if (m) return (
+              <span key={i} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:cfg.light,color:cfg.dark,borderRadius:5,padding:"1px 8px",margin:"0 2px",fontSize:12,fontWeight:700,fontFamily:SANS,border:`1.5px solid ${cfg.color}`,verticalAlign:"middle"}}>
+                {m[1]}
+              </span>
+            );
+            return <span key={i}>{part}</span>;
+          })}
+        </p>
+      );
+    }
+
+    function CitationApp() {
+      const [level,setLevel]           = useState("beginner");
+      const [idx,setIdx]               = useState(0);
+      const [submitted,setSubmitted]   = useState(false);
+      const [correct,setCorrect]       = useState(null);
+      const [showAnswer,setShowAnswer] = useState(false);
+      const [textInput,setTextInput]   = useState("");
+      const [pool,setPool]             = useState([]);
+      const [placed,setPlaced]         = useState([]);
+      const [selectedOpt,setSelectedOpt] = useState(null);
+      const [showFormat,setShowFormat] = useState(false);
+      const [done,setDone]             = useState(false);
+
+      const cfg=LEVEL_CONFIG[level], problems=PROBLEMS[level], p=problems[idx];
+      const total=problems.length, isLast=idx===total-1;
+
+      useEffect(() => {
+        if (p.type==="tap-order") { setPool(shuffle([...p.tiles])); setPlaced([]); }
+      }, [p.id]);
+
+      const resetAll = (lv) => {
+        setLevel(lv);setIdx(0);setSubmitted(false);setCorrect(null);setShowAnswer(false);
+        setTextInput("");setPool([]);setPlaced([]);setSelectedOpt(null);setShowFormat(false);setDone(false);
+      };
+      const handlePositionSelect = (opt) => { setSelectedOpt(opt); setCorrect(opt===p.answer); setSubmitted(true); };
+      const handleTapSubmit      = () => { setCorrect(normalize(placed)===normalize(p.answer)); setSubmitted(true); };
+      const handleTextSubmit     = () => { setCorrect(textInput.trim()===p.answer); setSubmitted(true); };
+      const handleNext = () => {
+        if (isLast){setDone(true);return;}
+        setIdx(i=>i+1);setSubmitted(false);setCorrect(null);setShowAnswer(false);setTextInput("");setSelectedOpt(null);
+      };
+      const handleRetry = () => {
+        setSubmitted(false);setCorrect(null);setSelectedOpt(null);
+        if(p.type==="tap-order"){setPool(shuffle([...p.tiles]));setPlaced([]);}
+      };
+      const addTile    = (i) => { const t=pool[i];    setPool(prev=>prev.filter((_,j)=>j!==i)); setPlaced(prev=>[...prev,t]); };
+      const removeTile = (i) => { const t=placed[i];  setPlaced(prev=>prev.filter((_,j)=>j!==i)); setPool(prev=>[...prev,t]); };
+      const getAnswerText = () => {
+        if(p.type==="tap-order") return normalize(p.answer);
+        if(p.type==="position")  return p.answerText;
+        return p.answer;
+      };
+
+      const Card = ({children,style={}}) => (
+        <div style={{background:"#fff",border:"1px solid #E2DDD5",borderRadius:12,padding:"14px 16px",marginBottom:12,...style}}>{children}</div>
+      );
+      const SLabel = ({text,color="#9B917F"}) => (
+        <p style={{margin:"0 0 7px",fontSize:11,fontWeight:700,color,letterSpacing:"0.06em"}}>{text}</p>
+      );
+
+      const FeedbackBlock = () => (
+        <div style={{background:"#fff",border:`2px solid ${correct?"#2D6A4F":"#DC3545"}`,borderRadius:12,padding:16}}>
+          {correct ? (
+            <>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <span style={{fontSize:26}}>✅</span>
+                <span style={{fontSize:19,fontWeight:700,color:"#2D6A4F"}}>正解！</span>
+              </div>
+              <div style={{background:"#D8F3DC",borderRadius:8,padding:12}}>
+                <SLabel text="正解" color="#1B4332"/>
+                <p style={{margin:0,fontSize:13,fontFamily:MONO,color:"#1B4332",lineHeight:1.7,wordBreak:"break-all"}}>{getAnswerText()}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <span style={{fontSize:26}}>❌</span>
+                <span style={{fontSize:19,fontWeight:700,color:"#842029"}}>もう少し！</span>
+              </div>
+              {p.type==="position" && selectedOpt && (
+                <p style={{margin:"0 0 10px",fontSize:13,color:"#6B6557"}}>
+                  あなたの回答：<strong style={{fontFamily:MONO}}>{selectedOpt}</strong>　→　正解は <strong style={{color:cfg.color}}>{p.answer}</strong>
+                </p>
+              )}
+              <div style={{background:"#FFF3CD",borderRadius:8,padding:12,marginBottom:12}}>
+                <SLabel text="💡 ヒント" color="#856404"/>
+                <p style={{margin:0,fontSize:14,color:"#5C3D0A",lineHeight:1.7}}>{p.hint}</p>
+              </div>
+              {!showAnswer
+                ? <button onClick={()=>setShowAnswer(true)} style={{fontSize:13,color:"#9B917F",background:"transparent",border:"none",cursor:"pointer",textDecoration:"underline",padding:0,fontFamily:SANS}}>答えを見る</button>
+                : <div style={{background:"#F8D7DA",borderRadius:8,padding:12}}>
+                    <SLabel text="正解" color="#58151C"/>
+                    <p style={{margin:0,fontSize:13,fontFamily:MONO,color:"#58151C",lineHeight:1.7,wordBreak:"break-all"}}>{getAnswerText()}</p>
+                  </div>
+              }
+            </>
+          )}
+          <div style={{display:"flex",gap:10,marginTop:16}}>
+            {!correct && (
+              <button onClick={handleRetry} style={{flex:1,padding:10,border:"1px solid #D0CBC4",borderRadius:8,background:"transparent",color:"#1E1B16",fontWeight:600,fontSize:14,cursor:"pointer",fontFamily:SANS}}>もう一度</button>
+            )}
+            {(correct||showAnswer) && (
+              <button onClick={handleNext} style={{flex:1,padding:10,border:"none",borderRadius:8,background:cfg.color,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:SANS}}>
+                {isLast?"完了！🎊":"次の問題へ →"}
+              </button>
+            )}
+          </div>
+        </div>
+      );
+
+      return (
+        <div style={{minHeight:"100vh",background:"#F5F3EE",fontFamily:SANS}}>
+          <div style={{background:"#fff",borderBottom:"1px solid #E2DDD5",padding:"13px 16px",textAlign:"center"}}>
+            <h1 style={{margin:0,fontSize:18,fontWeight:700,color:"#1E1B16"}}>📚 参考文献　書き方練習</h1>
+          </div>
+          <div style={{display:"flex",background:"#fff",borderBottom:"1px solid #E2DDD5"}}>
+            {Object.entries(LEVEL_CONFIG).map(([key,c]) => (
+              <button key={key} onClick={()=>resetAll(key)} style={{flex:1,padding:"11px 4px",border:"none",borderBottom:level===key?`3px solid ${c.color}`:"3px solid transparent",background:"transparent",cursor:"pointer",color:level===key?c.color:"#9B917F",fontWeight:level===key?700:400,fontSize:14,fontFamily:SANS,transition:"all 0.15s"}}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <div style={{maxWidth:640,margin:"0 auto",padding:16}}>
+            {done ? (
+              <div style={{textAlign:"center",padding:"48px 20px"}}>
+                <div style={{fontSize:52,marginBottom:16}}>🎊</div>
+                <h2 style={{margin:"0 0 8px",fontSize:22,color:cfg.color}}>{cfg.label}　完了！</h2>
+                <p style={{color:"#6B6557",marginBottom:28}}>全{total}問クリアしました</p>
+                <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+                  <button onClick={()=>resetAll(level)} style={{padding:"10px 22px",border:`2px solid ${cfg.color}`,borderRadius:8,background:"transparent",color:cfg.color,fontWeight:600,cursor:"pointer",fontFamily:SANS,fontSize:14}}>もう一度やる</button>
+                  {level!=="advanced" && (
+                    <button onClick={()=>resetAll(level==="beginner"?"intermediate":"advanced")} style={{padding:"10px 22px",border:"none",borderRadius:8,background:cfg.color,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:SANS,fontSize:14}}>次のレベルへ →</button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                  <span style={{fontSize:13,color:"#9B917F",whiteSpace:"nowrap"}}>{idx+1} / {total}</span>
+                  <div style={{flex:1,background:"#E2DDD5",borderRadius:99,height:6}}>
+                    <div style={{width:`${((idx+1)/total)*100}%`,height:6,background:cfg.color,borderRadius:99,transition:"width 0.3s"}}/>
+                  </div>
+                  {level==="beginner" && (
+                    <span style={{background:cfg.light,color:cfg.dark,fontSize:11,padding:"2px 9px",borderRadius:99,fontWeight:600,whiteSpace:"nowrap"}}>
+                      {p.type==="position"?"位置選択":"並べ替え"}
+                    </span>
+                  )}
+                </div>
+
+                {level==="beginner" && p.type==="tap-order" && idx===5 && (
+                  <div style={{background:"#EAF4FB",border:"1px solid #B8D8F0",borderRadius:10,padding:"10px 14px",marginBottom:12,textAlign:"center"}}>
+                    <p style={{margin:0,fontSize:14,color:"#1565C0",fontWeight:600}}>後半は並べ替え問題！タイルをタップして順番に並べよう 🃏</p>
+                  </div>
+                )}
+
+                <Card>
+                  <p style={{margin:0,fontSize:15,fontWeight:600,color:"#1E1B16"}}>{level==="beginner"?p.question:p.instruction}</p>
+                  {level==="beginner"&&p.subtitle&&(
+                    <span style={{display:"inline-block",marginTop:6,background:cfg.light,color:cfg.dark,fontSize:11,padding:"2px 9px",borderRadius:99,fontWeight:600}}>{p.subtitle}</span>
+                  )}
+                </Card>
+
+                {level==="beginner"&&p.type==="position"&&(
+                  <>
+                    <Card><SLabel text="A・B・Cのどこに入る？"/><TemplateDisplay template={p.template} cfg={cfg}/></Card>
+                    <Card style={{border:`1px solid ${cfg.light}`}}>
+                      <SLabel text="入れる要素" color={cfg.color}/>
+                      <p style={{margin:0,fontSize:15,fontFamily:MONO,color:"#1E1B16",fontWeight:600}}>{p.element}</p>
+                    </Card>
+                    {!submitted&&(
+                      <div style={{display:"flex",gap:14,justifyContent:"center",marginBottom:12}}>
+                        {["A","B","C"].map(opt=>(
+                          <button key={opt} onClick={()=>handlePositionSelect(opt)} style={{width:76,height:60,border:`2px solid ${cfg.color}`,borderRadius:14,background:"#fff",fontSize:24,fontWeight:700,color:cfg.color,cursor:"pointer",fontFamily:SANS}}>{opt}</button>
+                        ))}
+                      </div>
+                    )}
+                    {submitted&&<FeedbackBlock/>}
+                  </>
+                )}
+
+                {level==="beginner"&&p.type==="tap-order"&&(
+                  <>
+                    {!submitted&&(
+                      <>
+                        <div style={{minHeight:64,background:"#FAFAF7",borderRadius:10,border:"2px dashed #C8C2BB",padding:"10px 12px",display:"flex",flexWrap:"wrap",gap:8,marginBottom:12,alignItems:"center"}}>
+                          {placed.length===0
+                            ?<span style={{color:"#C8C2BB",fontSize:13}}>↓のタイルをタップして並べよう</span>
+                            :placed.map((t,i)=><button key={`pl-${i}`} onClick={()=>removeTile(i)} style={{background:cfg.color,color:"#fff",border:"none",borderRadius:8,padding:"7px 10px",fontSize:12,fontFamily:MONO,cursor:"pointer"}}>{t}</button>)
+                          }
+                        </div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+                          {pool.map((t,i)=><button key={`po-${i}`} onClick={()=>addTile(i)} style={{background:"#fff",color:"#1E1B16",border:`2px solid ${cfg.color}`,borderRadius:8,padding:"7px 10px",fontSize:12,fontFamily:MONO,cursor:"pointer"}}>{t}</button>)}
+                        </div>
+                        {placed.length===p.tiles.length&&(
+                          <button onClick={handleTapSubmit} style={{width:"100%",padding:11,border:"none",borderRadius:8,background:cfg.color,color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:SANS}}>答え合わせ</button>
+                        )}
+                      </>
+                    )}
+                    {submitted&&<FeedbackBlock/>}
+                  </>
+                )}
+
+                {level!=="beginner"&&(
+                  <>
+                    {level==="advanced"&&(
+                      <div style={{background:"#fff",border:"1px solid #E2DDD5",borderRadius:12,marginBottom:12,overflow:"hidden"}}>
+                        <button onClick={()=>setShowFormat(f=>!f)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"transparent",border:"none",cursor:"pointer",fontFamily:SANS}}>
+                          <span style={{fontSize:14,fontWeight:600,color:"#1E1B16"}}>📄 投稿要領を確認する</span>
+                          <span style={{fontSize:12,color:"#9B917F"}}>{showFormat?"▲ 閉じる":"▼ 開く"}</span>
+                        </button>
+                        {showFormat&&(
+                          <div style={{borderTop:"1px solid #E2DDD5",padding:16,background:"#FAFAF7"}}>
+                            <pre style={{margin:0,fontSize:12,color:"#2C2C2C",whiteSpace:"pre-wrap",fontFamily:SANS,lineHeight:1.8}}>{FORMAT_DOC}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {p.example&&(
+                      <Card style={{border:`1px solid ${cfg.light}`}}>
+                        <SLabel text="例" color={cfg.color}/>
+                        <p style={{margin:0,fontSize:12,fontFamily:MONO,color:"#1E1B16",lineHeight:1.7,wordBreak:"break-all"}}>{p.example}</p>
+                      </Card>
+                    )}
+                    {p.reference&&(
+                      <Card>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                          <SLabel text="参考文献カード"/>
+                          <span style={{background:cfg.light,color:cfg.dark,fontSize:11,padding:"2px 10px",borderRadius:99,fontWeight:600,marginTop:-7}}>{p.reference.type}</span>
+                        </div>
+                        {p.reference.items.map(item=>(
+                          <div key={item.label} style={{display:"flex",gap:12,marginBottom:6}}>
+                            <span style={{fontSize:12,color:"#9B917F",minWidth:88,paddingTop:2}}>{item.label}</span>
+                            <span style={{fontSize:13,color:"#1E1B16",wordBreak:"break-all"}}>{item.value}</span>
+                          </div>
+                        ))}
+                      </Card>
+                    )}
+                    {!submitted&&(
+                      <Card>
+                        <SLabel text="出典を入力"/>
+                        <textarea value={textInput} onChange={e=>setTextInput(e.target.value)} placeholder="ここに出典を書いてください" rows={4}
+                          style={{width:"100%",border:"1px solid #D0CBC4",borderRadius:8,padding:"10px 12px",fontSize:13,fontFamily:MONO,color:"#1E1B16",boxSizing:"border-box",resize:"vertical",outline:"none",lineHeight:1.7}}/>
+                        <button onClick={handleTextSubmit} disabled={!textInput.trim()} style={{marginTop:12,width:"100%",padding:11,border:"none",borderRadius:8,background:textInput.trim()?cfg.color:"#E2DDD5",color:textInput.trim()?"#fff":"#9B917F",fontWeight:700,fontSize:15,cursor:textInput.trim()?"pointer":"not-allowed",fontFamily:SANS}}>
+                          答え合わせ
+                        </button>
+                      </Card>
+                    )}
+                    {submitted&&<FeedbackBlock/>}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<CitationApp />);
+  </script>
+</body>
+</html>
